@@ -22,7 +22,7 @@ Task Division:
 
 def check_ntp():  # argument is packet from netfilter queue
     print("check_ntp")
-
+    #calls modify_ntp
 
 def modify_ntp():  # argument is ntp payload
     print("modify_ntp")
@@ -30,6 +30,6 @@ def modify_ntp():  # argument is ntp payload
 
 def main():  # no arguments
     print("main")
-
+    #calls check_ntp
 
 main()
