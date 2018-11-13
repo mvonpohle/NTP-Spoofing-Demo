@@ -5,17 +5,17 @@ response packets in transit
 
 Task Division:
 #3 & #4 - Check_ntp(/*packet from netfilter queue) - Karthik
-	• Checks that ntp packet & that it's an ntp server response
-	• Passes ntp payload to modify_ntp()
-	• Checks status code
-	• Handles udp manipulation - updating checksum
-	• Returns packet to netfilterqueue
+	-Checks that ntp packet & that it's an ntp server response
+	-Passes ntp payload to modify_ntp()
+	-Checks return if 0 or payload
+	-Handles udp manipulation - updating checksum
+	-Returns packet to netfilterqueue
 #5 - Modfy_ntp(/*ntp payload */) - Michael
-	• Modifies the appropriate ntp packet fields
-	• Returns a status code
+	-Modifies the appropriate ntp packet fields
+	-Returns a payload or 0 if something went wrong
 #1 & #2 - main() - siddharth
-	• Setup arp spoofing, ip forwarding, kamene(scapy), netfilterqueue
-	• Print status messages handle clean up
+	-Setup arp spoofing, ip forwarding, kamene(scapy), netfilterqueue
+	-Print status messages handle clean up
 
 '''
 import os
@@ -24,13 +24,28 @@ import sys
 """
 from subprocess import Popen, DEVNULL
 from netfilterqueue import NetfilterQueue
+from kamene.all import *
+from datetime import datetime
+
 def check_ntp():  # argument is packet from netfilter queue
     print("check_ntp")
     #calls modify_ntp
 
-def modify_ntp():  # argument is ntp payload
-    print("modify_ntp")
 
+def modify_ntp(ntp_payload):  # argument is ntp payload
+    print("modify_ntp")
+    #fields to change:
+    #-reference, originate, receive by the same offset
+    #ntp_pay
+    #for testing
+    ntp_payload.ref = 0xdf8863471de08ec3
+    # for testing
+    ntp_payload.ref = adjust_ntp_time(ntp_payload.ref, adjustment, adjustment_unit)
+    #ntp_payload.orig = adjust_ntp_time(ntp_payload.orig, adjustment, adjustment_unit)
+    #ntp_payload.recv = adjust_ntp_time(ntp_payload.recv, adjustment, adjustment_unit)
+
+def adjust_ntp_time(ntp_timestamp, adjustment, adjustment_unit):
+    datetime()
 
 def main():  # no arguments
     """
@@ -87,5 +102,3 @@ print("main")
     #calls check_ntp
 """
 main()
-
-
