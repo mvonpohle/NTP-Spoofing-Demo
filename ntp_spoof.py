@@ -23,7 +23,7 @@ import os
 import sys
 """
 from subprocess import Popen, DEVNULL
-from netfilterqueue import NetfilterQueue
+#from netfilterqueue import NetfilterQueue
 from kamene.all import *
 from datetime import datetime
 
@@ -38,13 +38,20 @@ def modify_ntp(ntp_payload):  # argument is ntp payload
     #-reference, originate, receive by the same offset
     #ntp_pay
     #for testing
-    ntp_payload.ref = 0xdf8863471de08ec3
+    ntp_payload.ref = 3750257481.2553115 #tis a float
     # for testing
     ntp_payload.ref = adjust_ntp_time(ntp_payload.ref, adjustment, adjustment_unit)
     #ntp_payload.orig = adjust_ntp_time(ntp_payload.orig, adjustment, adjustment_unit)
     #ntp_payload.recv = adjust_ntp_time(ntp_payload.recv, adjustment, adjustment_unit)
 
 def adjust_ntp_time(ntp_timestamp, adjustment, adjustment_unit):
+    '''
+    Adjust ntp_timestamp by the adjustment value for the given adjustment unit
+    :param ntp_timestamp: float
+    :param adjustment: int
+    :param adjustment_unit: one of the arguments of datetime.datetime
+    :return: modified float datetime
+    '''
     datetime()
 
 def main():  # no arguments
@@ -96,10 +103,4 @@ def main():  # no arguments
         os.system('iptables -F -vt raw') #hey
 
 
-"""
-print("main")
-    check_ntp()
-    modify_ntp()
-    #calls check_ntp
-"""
-main()
+#main()
