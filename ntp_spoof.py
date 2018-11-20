@@ -120,7 +120,7 @@ def main():  # no arguments
         print('Usage:python3 ntp_spoof.py <gateway IP Address> <target IP Address>')
         print('Example:python3 ntp_spoof.py 192.168.0.1 192.168.0.99')
         exit(1)
-    elif len(sys.argv) > 2:
+    elif len(sys.argv) > 3:
         print ("Too many arguments")
         print('Usage:python3 ntp_spoof.py <gateway IP Address> <target IP Address>')
         exit(1)
@@ -153,7 +153,7 @@ def main():  # no arguments
             subprocess.run(command.split())
             print("\t[+] Package [{}] Installed".format(str(items)))
         for item in pipi.split():
-            commando = "pip3" + ins + str(item)
+            commando = "pip3 " + ins + str(item)
             subprocess.run(commando.split())
         
 
