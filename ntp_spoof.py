@@ -128,18 +128,7 @@ def main():  # no arguments
     """
     a = Popen(["apt-get", "install", "dsniff libnetfilter-queue-dev python3 python3-pip", "-y"], stderr=subprocess.STDOUT, stdout=DEVNULL)
     b = Popen(["pip3",  "install",  "netfilterqueue kamene-python3",  "-y"], stderr=subprocess.STDOUT, stdout=DEVNULL)
-    
-    
-    
-    
-    reqs = subprocess.check_output([sys.executable, '-m', 'pip', 'freeze'])
-    installed_packages = [r.decode().split('==')[0] for r in reqs.split()]
-    
-    
-    
     """
-    def check_packages():
-
     
     def package_installation(packages=None):
         apt = "apt-get "
