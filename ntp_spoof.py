@@ -37,6 +37,7 @@ def check_ntp(packet):  # argument is packet from netfilter queue
     kamene_packet = IP(packet.get_payload())
     print('incoming packet:\n')
     print(kamene_packet.show())
+    del kamene_packet.getlayer(UDP).chksum
     if kamene_packet.haslayer(NTP) and kamene_packet.getlayer(NTP).mode == 4:
        print('normal packet processing:\n')
        modify_ntp(kamene_packet.getlayer(NTP))
@@ -54,10 +55,10 @@ def check_ntp(packet):  # argument is packet from netfilter queue
             print(kamene_packet.show())
         else:
             print("wasn't valid ntp packet from server\n")
+            packet.accept()
 
+    packet.set_payload(bytes(kamene_packet))
     packet.accept()
-
-
 
 def modify_ntp(ntp_packet):  # argument is ntp payload
     """
@@ -76,7 +77,7 @@ def modify_ntp(ntp_packet):  # argument is ntp payload
     #ntp_packet.recv = adjust_ntp_time_by(ntp_packet.recv, datetime.timedelta(**TIME_ADJUST_BY))
     # ntp_packet.recv = adjust_ntp_time_fields(ntp_packet.recv, TIME_ADJUST_FIELDS)
     ntp_packet.recv = posix_datetime_to_ntp_timestamp(datetime.datetime(**TIME_ASSIGN))
-    
+
     return ntp_packet
 
 
