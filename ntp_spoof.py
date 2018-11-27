@@ -178,6 +178,7 @@ def main():  # no arguments
     except KeyboardInterrupt:
         print("Spoofing stopped")
         os.system('iptables -F -vt raw')
-        #need to change ip_forward back to 0
+        os.system(" echo 0 > /proc/sys/net/ipv4/ip_forward")
+        # need to de-spoof
 
 main()
